@@ -1,0 +1,8 @@
+name = "volna"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+
+# Статика (PWA) раздаётся из ./static, а Worker (src/index.js) обрабатывает /api/*
+[assets]
+directory = "./static"
+binding = "ASSETS"

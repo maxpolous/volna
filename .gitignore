@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.DS_Store
+.env
+*.log
+cookies.txt
+.venv/
+venv/
+*.m4a
+*.mp3
+node_modules/
+package-lock.json
+package.json
+.wrangler/

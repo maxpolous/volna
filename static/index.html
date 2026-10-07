@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
+  <title>Волна</title>
+  <meta name="theme-color" content="#0b0f1a" />
+  <link rel="manifest" href="manifest.webmanifest" />
+
+  <!-- iOS: полноэкранный режим, иконка, заголовок -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Волна" />
+  <link rel="apple-touch-icon" href="icon-180.png" />
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div class="brand">
+        <svg class="brand-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#wave"/></svg>
+        <span>Волна</span>
+      </div>
+      <div class="top-actions">
+        <button id="storageBtn" class="icon-btn" title="Хранилище" aria-label="Хранилище">
+          <svg viewBox="0 0 24 24"><use href="#disk"/></svg>
+        </button>
+        <button id="settingsBtn" class="icon-btn" title="Настройки" aria-label="Настройки">
+          <svg viewBox="0 0 24 24"><use href="#gear"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Настройки: вход в SoundCloud токеном (хранится только на телефоне) -->
+    <section id="settings" class="settings" hidden>
+      <div class="s-title">Вход в SoundCloud</div>
+      <p class="s-help">Нужен токен сессии — cookie <code>oauth_token</code> с soundcloud.com. Хранится только на этом телефоне, сервер его не сохраняет.</p>
+      <input id="tokenInput" type="text" placeholder="2-xxxxxx-xxxxxxxxx-xxxxxxxxxxxxxxxx"
+             autocapitalize="off" autocorrect="off" spellcheck="false" />
+      <div class="s-row">
+        <button id="tokenSave" class="btn" type="button">Сохранить и проверить</button>
+        <button id="tokenClear" class="btn ghost" type="button">Выйти</button>
+      </div>
+      <div id="tokenState" class="s-state">Вход не выполнен</div>
+      <details class="s-how">
+        <summary>Где взять токен</summary>
+        <ol>
+          <li>На компьютере войди на <b>soundcloud.com</b>.</li>
+          <li>Открой инструменты разработчика (⌥⌘I в Safari/Chrome, F12) → вкладка <b>Application</b> (Chrome) или <b>Storage</b> (Safari/Firefox) → <b>Cookies</b> → soundcloud.com.</li>
+          <li>Скопируй значение <b>oauth_token</b> (вида <code>2-…</code>) и вставь сюда.</li>
+        </ol>
+        <p>Токен = доступ к твоему аккаунту, никому не показывай. Живёт месяцами; перестанет работать — скопируй заново.</p>
+      </details>
+      <details class="s-how">
+        <summary>Вход в один тап с телефона (закладка)</summary>
+        <ol>
+          <li>Нажми «Скопировать код закладки».</li>
+          <li>В Safari добавь любую закладку, открой её редактирование, в поле адреса вставь скопированный код, назови «Волна: войти».</li>
+          <li>Открой <b>soundcloud.com</b> (залогинен) → открой закладку «Волна: войти» → окажешься здесь уже вошедшим.</li>
+        </ol>
+        <div class="s-row"><button id="bmCopy" class="btn ghost" type="button">Скопировать код закладки</button></div>
+        <textarea id="bmCode" readonly rows="3"></textarea>
+      </details>
+    </section>
+
+    <nav class="tabs" id="tabs">
+      <button class="tab on" data-tab="lib" type="button">Библиотека</button>
+      <button class="tab" data-tab="likes" type="button">Лайки</button>
+      <button class="tab" data-tab="playlists" type="button">Плейлисты</button>
+      <button class="tab" data-tab="search" type="button">Поиск</button>
+    </nav>
+
+    <div class="statusbar"><div id="status" class="status" hidden></div></div>
+
+    <!-- Библиотека: скачанное + добавление по ссылке -->
+    <div id="panel-lib" class="panel">
+      <section class="add">
+        <form id="addForm" autocomplete="off">
+          <input id="url" type="url" inputmode="url" placeholder="Вставь ссылку SoundCloud / YouTube"
+                 enterkeyhint="go" spellcheck="false" />
+          <button id="addBtn" type="submit" aria-label="Добавить">
+            <svg viewBox="0 0 24 24"><use href="#plus"/></svg>
+          </button>
+        </form>
+        <button id="pasteBtn" class="paste" type="button">Вставить из буфера</button>
+      </section>
+      <section class="list-wrap">
+        <div id="empty" class="empty" hidden>
+          <svg viewBox="0 0 24 24"><use href="#note"/></svg>
+          <p>Пусто. Вставь ссылку выше или найди трек во вкладках «Лайки», «Плейлисты», «Поиск» — он сохранится сюда и будет играть офлайн.</p>
+        </div>
+        <ul id="list" class="list"></ul>
+      </section>
+    </div>
+
+    <!-- Лайки -->
+    <div id="panel-likes" class="panel" hidden>
+      <section class="list-wrap">
+        <ul id="likesList" class="list"></ul>
+        <button id="likesMore" class="more-btn" type="button" hidden>Ещё</button>
+      </section>
+    </div>
+
+    <!-- Плейлисты -->
+    <div id="panel-playlists" class="panel" hidden>
+      <section class="list-wrap">
+        <div id="plHead" class="pl-head" hidden>
+          <button id="plBack" class="icon-btn" type="button" aria-label="Назад"><svg viewBox="0 0 24 24"><use href="#back"/></svg></button>
+          <span id="plTitle"></span>
+        </div>
+        <ul id="plList" class="list"></ul>
+      </section>
+    </div>
+
+    <!-- Поиск -->
+    <div id="panel-search" class="panel" hidden>
+      <section class="add">
+        <form id="searchForm" autocomplete="off">
+          <input id="q" type="search" placeholder="Поиск по SoundCloud" enterkeyhint="search" />
+          <button id="searchBtn" type="submit" aria-label="Искать">
+            <svg viewBox="0 0 24 24"><use href="#search"/></svg>
+          </button>
+        </form>
+      </section>
+      <section class="list-wrap"><ul id="searchList" class="list"></ul></section>
+    </div>
+
+    <!-- Нижний плеер -->
+    <footer id="player" class="player" hidden>
+      <div class="p-art" id="pArt"></div>
+      <div class="p-mid">
+        <div class="p-title" id="pTitle">—</div>
+        <div class="p-sub" id="pSub"></div>
+        <input id="seek" class="seek" type="range" min="0" max="1000" value="0" />
+        <div class="p-time"><span id="cur">0:00</span><span id="dur">0:00</span></div>
+      </div>
+      <div class="p-ctrl">
+        <button id="prev" class="icon-btn" aria-label="Назад"><svg viewBox="0 0 24 24"><use href="#prev"/></svg></button>
+        <button id="play" class="play-btn" aria-label="Играть"><svg viewBox="0 0 24 24"><use href="#play"/></svg></button>
+        <button id="next" class="icon-btn" aria-label="Вперёд"><svg viewBox="0 0 24 24"><use href="#next"/></svg></button>
+      </div>
+    </footer>
+  </div>
+
+  <audio id="audio" preload="metadata"></audio>
+
+  <!-- SVG-иконки (sprite) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="wave" viewBox="0 0 24 24"><path fill="currentColor" d="M2 12h2v0a1 1 0 0 1 0 2v-2Zm3-4a1 1 0 0 1 2 0v8a1 1 0 0 1-2 0V8Zm3-3a1 1 0 0 1 2 0v14a1 1 0 0 1-2 0V5Zm3 2a1 1 0 0 1 2 0v10a1 1 0 0 1-2 0V7Zm3-4a1 1 0 0 1 2 0v18a1 1 0 0 1-2 0V3Zm3 4a1 1 0 0 1 2 0v10a1 1 0 0 1-2 0V7Zm3 3a1 1 0 0 1 2 0v4a1 1 0 0 1-2 0v-4Z"/></symbol>
+      <symbol id="plus" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" d="M12 5v14M5 12h14"/></symbol>
+      <symbol id="play" viewBox="0 0 24 24"><path fill="currentColor" d="M8 5.14v13.72a1 1 0 0 0 1.5.86l11-6.86a1 1 0 0 0 0-1.72l-11-6.86A1 1 0 0 0 8 5.14Z"/></symbol>
+      <symbol id="pause" viewBox="0 0 24 24"><path fill="currentColor" d="M7 5h3v14H7zM14 5h3v14h-3z"/></symbol>
+      <symbol id="prev" viewBox="0 0 24 24"><path fill="currentColor" d="M7 6a1 1 0 0 1 2 0v5l8.5-5.3A1 1 0 0 1 19 6.5v11a1 1 0 0 1-1.5.86L9 13v5a1 1 0 0 1-2 0V6Z"/></symbol>
+      <symbol id="next" viewBox="0 0 24 24"><path fill="currentColor" d="M17 6a1 1 0 0 0-2 0v5L6.5 5.7A1 1 0 0 0 5 6.5v11a1 1 0 0 0 1.5.86L15 13v5a1 1 0 0 0 2 0V6Z"/></symbol>
+      <symbol id="note" viewBox="0 0 24 24"><path fill="currentColor" d="M9 18a3 3 0 1 1-2-2.83V6l10-2v8.17A3 3 0 1 0 19 15V3a1 1 0 0 0-1.24-.97l-10 2.5A1 1 0 0 0 7 5.5V12 18Z"/></symbol>
+      <symbol id="trash" viewBox="0 0 24 24"><path fill="currentColor" d="M6 7h12l-1 13a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 7Zm3-3h6l1 2H8l1-2Z"/></symbol>
+      <symbol id="share" viewBox="0 0 24 24"><path fill="currentColor" d="M12 3l4 4h-3v7h-2V7H8l4-4ZM5 11a1 1 0 0 1 2 0v7h10v-7a1 1 0 0 1 2 0v8a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-8Z"/></symbol>
+      <symbol id="disk" viewBox="0 0 24 24"><path fill="currentColor" d="M4 5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v6H4V5Zm0 8h16v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-6Zm3 3a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm0-8a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z"/></symbol>
+      <symbol id="gear" viewBox="0 0 24 24"><path fill="currentColor" d="M19.4 13a7.6 7.6 0 0 0 0-2l2-1.5-2-3.5-2.4 1a7.7 7.7 0 0 0-1.7-1L15 3H9l-.3 2.9a7.7 7.7 0 0 0-1.7 1l-2.4-1-2 3.5 2 1.5a7.6 7.6 0 0 0 0 2l-2 1.5 2 3.5 2.4-1a7.7 7.7 0 0 0 1.7 1L9 21h6l.3-2.9a7.7 7.7 0 0 0 1.7-1l2.4 1 2-3.5-2-1.5ZM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Z"/></symbol>
+      <symbol id="download" viewBox="0 0 24 24"><path fill="currentColor" d="M11 3h2v9.17l3.09-3.08 1.41 1.41L12 16 6.5 10.5l1.41-1.41L11 12.17V3ZM5 18h14v2H5v-2Z"/></symbol>
+      <symbol id="check" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+      <symbol id="lock" viewBox="0 0 24 24"><path fill="currentColor" d="M7 10V8a5 5 0 0 1 10 0v2h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h1Zm2 0h6V8a3 3 0 0 0-6 0v2Z"/></symbol>
+      <symbol id="search" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" d="M10.5 4a6.5 6.5 0 1 1 0 13 6.5 6.5 0 0 1 0-13Zm5 11.5L20 20"/></symbol>
+      <symbol id="back" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M15 5l-7 7 7 7"/></symbol>
+    </defs>
+  </svg>
+
+  <script src="app.js"></script>
+</body>
+</html>

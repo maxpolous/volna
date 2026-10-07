@@ -1,0 +1,6 @@
+# Версии не пиним: на HF Spaces gradio/uvicorn ставятся самим HF (sdk_version в README),
+# а fastapi должен подобраться совместимым с их starlette.
+fastapi
+yt-dlp
+httpx
+Pillow
